@@ -1,0 +1,44 @@
+name: Self-test
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  test-detects-issue:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Create a test package.json with a known-flagged dependency
+        run: |
+          cat > /tmp/test-package.json << 'PKGEOF'
+          { "name": "test", "dependencies": { "lodash": "^4.17.21" } }
+          PKGEOF
+      - name: Run the action against it (expected to fail)
+        id: check
+        uses: ./
+        with:
+          package-json-path: /tmp/test-package.json
+        continue-on-error: true
+      - name: Verify the action correctly failed
+        run: |
+          if [ "${{ steps.check.outcome }}" != "failure" ]; then
+            echo "❌ Expected the action to fail on a known-flagged package, but it didn't."
+            exit 1
+          fi
+          echo "✅ Action correctly flagged the known issue and failed as expected."
+
+  test-clean-package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Create a test package.json with a clean dependency
+        run: |
+          cat > /tmp/clean-package.json << 'PKGEOF'
+          { "name": "test", "dependencies": { "is-number": "^7.0.0" } }
+          PKGEOF
+      - name: Run the action against it (expected to pass)
+        uses: ./
+        with:
+          package-json-path: /tmp/clean-package.json
