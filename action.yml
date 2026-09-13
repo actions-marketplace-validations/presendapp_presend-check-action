@@ -1,5 +1,5 @@
 name: 'Presend Dependency Security Check'
-description: 'Flags suspicious maintainer changes and known vulnerabilities in your npm dependencies, using the free Presend API (no signup, no key required).'
+description: 'Flags suspicious maintainer changes and known vulnerabilities in your npm dependencies. Free, no signup.'
 author: 'presendapp'
 branding:
   icon: 'shield'
