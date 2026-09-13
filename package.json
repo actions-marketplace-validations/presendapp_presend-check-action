@@ -1,0 +1,5 @@
+{
+  "name": "presend-check-action",
+  "private": true,
+  "type": "module"
+}

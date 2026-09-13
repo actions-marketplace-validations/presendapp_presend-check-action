@@ -1,0 +1,31 @@
+name: 'Presend Dependency Security Check'
+description: 'Flags suspicious maintainer changes and known vulnerabilities in your npm dependencies, using the free Presend API (no signup, no key required).'
+author: 'presendapp'
+branding:
+  icon: 'shield'
+  color: 'blue'
+
+inputs:
+  package-json-path:
+    description: 'Path to package.json'
+    required: false
+    default: 'package.json'
+  checks:
+    description: 'Comma-separated checks to run: maintainer,vulnerability'
+    required: false
+    default: 'maintainer,vulnerability'
+  fail-on-issue:
+    description: 'Whether to fail the workflow if an issue is found'
+    required: false
+    default: 'true'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Run Presend dependency check
+      shell: bash
+      env:
+        PACKAGE_JSON_PATH: ${{ inputs.package-json-path }}
+        CHECKS: ${{ inputs.checks }}
+        FAIL_ON_ISSUE: ${{ inputs.fail-on-issue }}
+      run: node ${{ github.action_path }}/check.js
