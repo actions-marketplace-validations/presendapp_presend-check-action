@@ -1,21 +1,35 @@
 # Presend Dependency Security Check
 
-A GitHub Action that checks your npm dependencies against [Presend](https://presend.pages.dev)'s free API for two real supply-chain risks:
+A GitHub Action that checks your dependencies against [Presend](https://presend.pages.dev)'s free API for two real supply-chain risks:
 
-- **Suspicious maintainer changes** -- a package whose publisher changed after a long period of dormancy, the exact pattern behind real attacks like `event-stream`, `ua-parser-js`, and `colors.js`.
-- **Known vulnerabilities** -- via [OSV.dev](https://osv.dev).
+- **Suspicious maintainer changes** (npm only) -- a package whose publisher changed after a long period of dormancy, the exact pattern behind real attacks like `event-stream`, `ua-parser-js`, and `colors.js`.
+- **Known vulnerabilities** (npm and PyPI) -- via [OSV.dev](https://osv.dev).
 
 No signup, no API key, no rate-limit tier walls -- the underlying API is free to call directly too.
 
 ## Usage
 
+### npm
+
 ```yaml
 - uses: presendapp/presend-check-action@v1
   with:
-    package-json-path: 'package.json'  # optional, defaults to package.json
+    ecosystem: 'npm'                    # optional, this is the default
+    manifest-path: 'package.json'       # optional, defaults to package.json
     checks: 'maintainer,vulnerability'  # optional, defaults to both
     fail-on-issue: 'true'               # optional, set to 'false' to only warn
 ```
+
+### Python / PyPI
+
+```yaml
+- uses: presendapp/presend-check-action@v1
+  with:
+    ecosystem: 'pypi'
+    manifest-path: 'requirements.txt'   # optional, defaults to requirements.txt
+```
+
+`maintainer-change-check` is npm-only for now and is silently skipped in `pypi` mode -- only `vulnerability-check` runs.
 
 Full example workflow:
 
@@ -23,22 +37,26 @@ Full example workflow:
 name: Dependency security check
 on: [push, pull_request]
 jobs:
-  check:
+  check-npm:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: presendapp/presend-check-action@v1
+
+  check-python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: presendapp/presend-check-action@v1
+        with:
+          ecosystem: 'pypi'
 ```
 
 ## What it does
 
-For each dependency in `dependencies` and `devDependencies`, the action calls Presend's `/maintainer-change-check` and `/vulnerability-check` endpoints and prints a summary. If any package is flagged and `fail-on-issue` is `true` (the default), the workflow step fails.
+For each dependency in the manifest file, the action calls Presend's endpoints and prints a summary. If any package is flagged and `fail-on-issue` is `true` (the default), the workflow step fails.
 
 A flagged maintainer change is a signal for manual review, not proof of compromise -- legitimate maintainer handoffs happen. Read the summary before assuming the worst.
-
-## Currently npm only
-
-Both checks currently support the npm ecosystem only. PyPI and others may be added later.
 
 ## Source
 

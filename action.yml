@@ -6,12 +6,16 @@ branding:
   color: 'blue'
 
 inputs:
-  package-json-path:
-    description: 'Path to package.json'
+  ecosystem:
+    description: 'npm or pypi'
     required: false
-    default: 'package.json'
+    default: 'npm'
+  manifest-path:
+    description: 'Path to package.json (npm) or requirements.txt (pypi)'
+    required: false
+    default: ''
   checks:
-    description: 'Comma-separated checks to run: maintainer,vulnerability'
+    description: 'Comma-separated checks to run: maintainer,vulnerability. maintainer is npm-only and silently skipped for pypi.'
     required: false
     default: 'maintainer,vulnerability'
   fail-on-issue:
@@ -25,7 +29,8 @@ runs:
     - name: Run Presend dependency check
       shell: bash
       env:
-        PACKAGE_JSON_PATH: ${{ inputs.package-json-path }}
+        ECOSYSTEM: ${{ inputs.ecosystem }}
+        MANIFEST_PATH: ${{ inputs.manifest-path }}
         CHECKS: ${{ inputs.checks }}
         FAIL_ON_ISSUE: ${{ inputs.fail-on-issue }}
       run: node ${{ github.action_path }}/check.js
