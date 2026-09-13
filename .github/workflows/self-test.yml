@@ -10,13 +10,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - run: echo '{ "name": "test", "dependencies": { "lodash": "^4.17.21" } }' > /tmp/test-package.json
+      - name: Create test package.json
+        run: |
+          echo '{ "name": "test", "dependencies": { "lodash": "^4.17.21" } }' > /tmp/test-package.json
       - id: check
         uses: ./
         with:
           manifest-path: /tmp/test-package.json
         continue-on-error: true
-      - run: |
+      - name: Verify it was flagged
+        run: |
           if [ "${{ steps.check.outcome }}" != "failure" ]; then
             echo "❌ Expected npm mode to flag lodash, but it didn't."
             exit 1
@@ -27,7 +30,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - run: echo '{ "name": "test", "dependencies": { "is-number": "^7.0.0" } }' > /tmp/clean-package.json
+      - name: Create clean package.json
+        run: |
+          echo '{ "name": "test", "dependencies": { "is-number": "^7.0.0" } }' > /tmp/clean-package.json
       - uses: ./
         with:
           manifest-path: /tmp/clean-package.json
@@ -36,14 +41,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - run: echo 'django==3.2.0' > /tmp/test-requirements.txt
+      - name: Create test requirements.txt
+        run: |
+          echo 'django==3.2.0' > /tmp/test-requirements.txt
       - id: check
         uses: ./
         with:
           ecosystem: 'pypi'
           manifest-path: /tmp/test-requirements.txt
         continue-on-error: true
-      - run: |
+      - name: Verify it was flagged
+        run: |
           if [ "${{ steps.check.outcome }}" != "failure" ]; then
             echo "❌ Expected pypi mode to flag django==3.2.0, but it didn't."
             exit 1
