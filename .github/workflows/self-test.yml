@@ -69,6 +69,7 @@ jobs:
         uses: ./
         with:
           manifest-path: /tmp/safe-lodash.json
+          checks: vulnerability
         continue-on-error: true
       - name: Verify it was NOT flagged
         run: |
