@@ -57,3 +57,24 @@ jobs:
             exit 1
           fi
           echo "✅ pypi mode correctly flagged django==3.2.0."
+
+  test-npm-safe-version-not-flagged:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Create package.json with a safe, current lodash version
+        run: |
+          echo '{ "name": "test", "dependencies": { "lodash": "4.18.1" } }' > /tmp/safe-lodash.json
+      - id: check
+        uses: ./
+        with:
+          manifest-path: /tmp/safe-lodash.json
+          checks: vulnerability
+        continue-on-error: true
+      - name: Verify it was NOT flagged
+        run: |
+          if [ "${{ steps.check.outcome }}" != "success" ]; then
+            echo "❌ Expected lodash@4.18.1 (a safe, current version) to NOT be flagged, but it was."
+            exit 1
+          fi
+          echo "✅ Correctly did not flag a safe, current version -- confirms version-aware filtering works, not just presence-of-lodash."
