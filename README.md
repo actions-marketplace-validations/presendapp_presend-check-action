@@ -1,11 +1,18 @@
 # Presend Dependency Security Check
 
-A GitHub Action that checks your dependencies against [Presend](https://presend.pages.dev)'s free API for two real supply-chain risks:
+A GitHub Action that checks the dependencies in your `package.json` or `requirements.txt` for three supply-chain risks:
 
-- **Suspicious maintainer changes** (npm only) -- a package whose publisher changed after a long period of dormancy, the exact pattern behind real attacks like `event-stream`, `ua-parser-js`, and `colors.js`.
-- **Known vulnerabilities** (npm and PyPI) -- via [OSV.dev](https://osv.dev).
+- **Typosquats** (npm and PyPI): a dependency whose name is one or two edits away from a popular package (`expres` next to `express`). It uses [Presend](https://presend.pages.dev)'s typosquat check, whose false-positive rate on the most-used packages is [measured and published](https://presend.pages.dev/measurements).
+- **Suspicious maintainer changes** (npm only): a new publisher after a long period of dormancy, the pattern behind the `event-stream` compromise. It cannot detect a hijacked existing account (`ua-parser-js`) or a malicious release by the original maintainer (`colors.js`). A flagged change is a signal for review, not proof of compromise: legitimate handoffs happen.
+- **Names that do not exist** (npm and PyPI): a dependency name that is not on the registry, for instance invented by an AI model, is reported as an issue.
+- **New packages** (npm and PyPI): a dependency first published less than 30 days ago (on PyPI, the age of the oldest release still published) is reported as a warning, which does not fail the job. A recent package is often legitimate; it is also where invented and look-alike names get registered. These two signals come with the maintainer-change check: removing `maintainer` from `checks` removes them too.
+- **Known vulnerabilities** (npm and PyPI) of the version you use, straight from [OSV.dev](https://osv.dev).
 
-No signup, no API key, no rate-limit tier walls -- the underlying API is free to call directly too.
+It is not a malware scanner and does not analyse package code: use it alongside one.
+
+No signup, no API key, no paid tiers (per-minute rate limits apply). The action sends package names to the Presend API and package names with versions to OSV.dev; it never sends your code. Its requests identify themselves with the User-Agent `presend-check-action`.
+
+**Teams:** we are testing a paid version (a comment on every pull request that changes a dependency, higher limits, measurements re-run with every release). Nothing is for sale yet: [join the waitlist](https://presend.pages.dev/teams). This action stays free.
 
 ## Usage
 
@@ -14,10 +21,11 @@ No signup, no API key, no rate-limit tier walls -- the underlying API is free to
 ```yaml
 - uses: presendapp/presend-check-action@v1
   with:
-    ecosystem: 'npm'                    # optional, this is the default
-    manifest-path: 'package.json'       # optional, defaults to package.json
-    checks: 'maintainer,vulnerability'  # optional, defaults to both
-    fail-on-issue: 'true'               # optional, set to 'false' to only warn
+    ecosystem: 'npm'                              # optional, this is the default
+    manifest-path: 'package.json'                 # optional, defaults to package.json
+    checks: 'typosquat,maintainer,vulnerability'  # optional, defaults to all three
+    fail-on-issue: 'true'                         # optional, 'false' to only report
+    fail-on-incomplete: 'false'                   # optional, 'true' to fail when some checks could not run
 ```
 
 ### Python / PyPI
@@ -29,7 +37,7 @@ No signup, no API key, no rate-limit tier walls -- the underlying API is free to
     manifest-path: 'requirements.txt'   # optional, defaults to requirements.txt
 ```
 
-`maintainer-change-check` is npm-only for now and is silently skipped in `pypi` mode -- only `vulnerability-check` runs.
+The publisher-change analysis is npm-only: in `pypi` mode the same check reports only names that do not exist and new packages.
 
 Full example workflow:
 
@@ -54,10 +62,14 @@ jobs:
 
 ## What it does
 
-For each dependency in the manifest file, the action calls Presend's endpoints and prints a summary. If any package is flagged and `fail-on-issue` is `true` (the default), the workflow step fails.
+The action reads the direct dependencies of the manifest (`dependencies` and `devDependencies` for npm). Names are checked in batches (100 per typosquat request, 20 per maintainer request) and all versions are sent to OSV.dev in a single request, so even a large manifest needs only a few requests. Rate limits are per minute: if one is reached, the action waits and retries before giving up.
 
-A flagged maintainer change is a signal for manual review, not proof of compromise -- legitimate maintainer handoffs happen. Read the summary before assuming the worst.
+**Which version is checked.** For npm, the installed version from `package-lock.json` when it sits next to `package.json`. Otherwise the version written in the manifest; for a range such as `^1.2.3` or `>=1.2`, that is its lower bound, labelled as such in the output, because the installed version may already include the fix. A dependency without a version is reported as not checked for vulnerabilities.
+
+**Incomplete results.** When a check cannot run (rate limit, network error), the action says so with a warning and `RESULT INCOMPLETE`, and never reports a clean result for checks that did not run. This does not fail the job unless `fail-on-incomplete` is `'true'`.
+
+If any package is flagged and `fail-on-issue` is `'true'` (the default), the step fails.
 
 ## Source
 
-This action wraps the public Presend API. Full API docs, source, and the underlying endpoints: [github.com/presendapp/presend](https://github.com/presendapp/presend)
+This action wraps the public Presend API. Full API docs, source, and the underlying endpoints: [github.com/presendapp/presend-source](https://github.com/presendapp/presend-source)
